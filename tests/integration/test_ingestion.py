@@ -1,6 +1,7 @@
 """Testes de integracao da ingestaio documental (ETAPA 01B)."""
-import pytest
 from pathlib import Path
+
+import pytest
 
 from licitacao.db.models import DocumentoFonte, Licitacao, TrechoDocumento
 from licitacao.domain import enums
