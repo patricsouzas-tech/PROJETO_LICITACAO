@@ -86,3 +86,9 @@ PASS (README mantem ETAPA 01 CONCLUIDA; novo ETAPA_01C_RESULTADO.md)
 
 ## Fundação pronta para ETAPA 02
 SIM (depende de GitHub Actions verde para liberacao oficial pelo ChatGPT)
+
+## Atualização pós-ETAPA 01D
+O CI foi concluído VERDE pela ETAPA 01D. Os jobs Linux Python 3.13, Linux Python 3.14 e
+Windows Python 3.13 executaram Ruff, Alembic (upgrade/downgrade/upgrade) e Pytest com
+sucesso (49 PASS / 0 FAIL / 0 SKIP). HEAD verde: 9f5a65dae15d9490a3028a8c669b868799adfdc4.
+Detalhes em ETAPA_01D_RESULTADO.md.
