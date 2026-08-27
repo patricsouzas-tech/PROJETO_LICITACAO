@@ -17,7 +17,7 @@ $env:DATA_DIR = "$root/data/test_documentos"
 & "$venv\Scripts\python.exe" -m pytest $root/tests -v
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-& "$venv\Scripts\python.exe" -m ruff check "$root/src" "$root/tests"
+& "$venv\Scripts\python.exe" -m ruff check "$root"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "TESTES E LINT OK"
