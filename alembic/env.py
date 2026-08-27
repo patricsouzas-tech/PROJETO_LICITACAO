@@ -1,4 +1,5 @@
 from logging.config import fileConfig
+from pathlib import Path
 
 from sqlalchemy import engine_from_config, pool
 
@@ -9,6 +10,20 @@ from licitacao.db.base import Base
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
+
+
+def _garantir_diretorio_db() -> None:
+    url = settings.database_url
+    if url.startswith("sqlite:///"):
+        caminho = url.replace("sqlite:///", "", 1)
+        if caminho and not caminho.startswith(":") and not caminho.startswith("/"):
+            p = Path(caminho)
+            if not p.is_absolute():
+                p = Path.cwd() / p
+            p.parent.mkdir(parents=True, exist_ok=True)
+
+
+_garantir_diretorio_db()
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
