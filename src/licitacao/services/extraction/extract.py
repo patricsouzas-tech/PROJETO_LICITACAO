@@ -6,6 +6,8 @@ from ...core.logging import get_logger
 
 logger = get_logger(__name__)
 
+_NS_W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+
 
 @dataclass
 class TrechoExtraido:
@@ -16,6 +18,8 @@ class TrechoExtraido:
     celula_inicio: str | None = None
     celula_fim: str | None = None
     paragrafo: int | None = None
+    tabela: str | None = None
+    linha_tabela: int | None = None
 
 
 @dataclass
@@ -25,12 +29,12 @@ class ExtracaoResultado:
     erro: str | None = None
 
 
-def _sha256_texto(texto: str) -> str:
-    return hashlib.sha256(texto.encode("utf-8")).hexdigest()
-
-
 def _limpar(texto: str) -> str:
     return texto.replace("\u00a0", " ").strip()
+
+
+def _sha256_texto(texto: str) -> str:
+    return hashlib.sha256(texto.encode("utf-8")).hexdigest()
 
 
 def extrair_pdf(caminho: Path) -> ExtracaoResultado:
@@ -42,7 +46,6 @@ def extrair_pdf(caminho: Path) -> ExtracaoResultado:
     resultado = ExtracaoResultado()
     try:
         reader = PdfReader(str(caminho))
-        pagina_idx = 0
         for pagina_idx, page in enumerate(reader.pages, start=1):
             texto = _limpar(page.extract_text() or "")
             if not texto:
@@ -63,39 +66,49 @@ def extrair_pdf(caminho: Path) -> ExtracaoResultado:
 def extrair_docx(caminho: Path) -> ExtracaoResultado:
     try:
         from docx import Document
+        from docx.oxml.ns import qn
+        from docx.table import Table
+        from docx.text.paragraph import Paragraph
     except ImportError:
         return ExtracaoResultado(erro="python-docx nao instalado")
 
     resultado = ExtracaoResultado()
     try:
         doc = Document(str(caminho))
-        idx = 0
-        for par in doc.paragraphs:
-            texto = _limpar(par.text)
-            if not texto:
-                continue
-            idx += 1
-            resultado.trechos.append(
-                TrechoExtraido(
-                    tipo_localizador="PARAGRAFO",
-                    texto_bruto=texto,
-                    paragrafo=idx,
-                )
-            )
-        for table in doc.tables:
-            for row in table.rows:
-                celulas = [_limpar(c.text) for c in row.cells]
-                texto = " | ".join(c for c in celulas if c)
+        corpo = doc.element.body
+        ordem = 0
+        idx_tabela = 0
+        for child in corpo.iterchildren():
+            if child.tag == qn("w:p"):
+                par = Paragraph(child, doc)
+                texto = _limpar(par.text)
                 if not texto:
                     continue
-                idx += 1
+                ordem += 1
                 resultado.trechos.append(
                     TrechoExtraido(
                         tipo_localizador="PARAGRAFO",
                         texto_bruto=texto,
-                        paragrafo=idx,
+                        paragrafo=ordem,
                     )
                 )
+            elif child.tag == qn("w:tbl"):
+                idx_tabela += 1
+                tabela = Table(child, doc)
+                for linha_idx, row in enumerate(tabela.rows, start=1):
+                    celulas = [_limpar(c.text) for c in row.cells]
+                    texto = " | ".join(c for c in celulas if c)
+                    if not texto:
+                        continue
+                    ordem += 1
+                    resultado.trechos.append(
+                        TrechoExtraido(
+                            tipo_localizador="TABELA",
+                            texto_bruto=texto,
+                            tabela=str(idx_tabela),
+                            linha_tabela=linha_idx,
+                        )
+                    )
     except Exception as exc:  # noqa: BLE001
         resultado.erro = f"Falha ao extrair DOCX: {exc}"
     return resultado
@@ -113,22 +126,24 @@ def extrair_xlsx(caminho: Path) -> ExtracaoResultado:
         for sheet in wb.sheetnames:
             ws = wb[sheet]
             for row in ws.iter_rows():
-                valores = [
-                    _limpar(str(c.value)) for c in row if c.value is not None
+                celulas = [
+                    (c.coordinate, _limpar(str(c.value)))
+                    for c in row
+                    if c.value is not None
                 ]
-                valores = [v for v in valores if v]
-                if not valores:
+                celulas = [(coord, v) for coord, v in celulas if v]
+                if not celulas:
                     continue
-                texto = " | ".join(valores)
-                primeira = row[0]
-                ultima = row[-1]
+                primeira = celulas[0][0]
+                ultima = celulas[-1][0]
+                texto = " | ".join(v for _, v in celulas)
                 resultado.trechos.append(
                     TrechoExtraido(
                         tipo_localizador="CELULA",
                         texto_bruto=texto,
                         planilha=sheet,
-                        celula_inicio=primeira.coordinate,
-                        celula_fim=ultima.coordinate,
+                        celula_inicio=primeira,
+                        celula_fim=ultima,
                     )
                 )
         wb.close()
@@ -142,7 +157,7 @@ def extrair_txt(caminho: Path) -> ExtracaoResultado:
     try:
         raw = caminho.read_bytes()
         texto = None
-        for enc in ("utf-8", "latin-1", "cp1252"):
+        for enc in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
             try:
                 texto = raw.decode(enc)
                 break
@@ -167,13 +182,18 @@ def extrair_txt(caminho: Path) -> ExtracaoResultado:
     return resultado
 
 
+_EXTENSOES_VALIDAS = {"pdf", "docx", "xlsx", "txt"}
+
+
 def extrair(caminho: Path, extensao: str) -> ExtracaoResultado:
     ext = extensao.lower().lstrip(".")
+    if ext not in _EXTENSOES_VALIDAS:
+        return ExtracaoResultado(erro=f"Formato nao suportado: {ext}")
     if ext == "pdf":
         return extrair_pdf(caminho)
-    if ext in ("docx", "doc"):
+    if ext == "docx":
         return extrair_docx(caminho)
-    if ext in ("xlsx", "xlsm"):
+    if ext == "xlsx":
         return extrair_xlsx(caminho)
     if ext == "txt":
         return extrair_txt(caminho)

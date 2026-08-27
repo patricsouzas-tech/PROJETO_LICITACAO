@@ -1,8 +1,10 @@
 import hashlib
+import re
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ...core.config import settings
@@ -14,7 +16,7 @@ from ..extraction.extract import extrair
 
 logger = get_logger(__name__)
 
-_EXTENSOES_VALIDAS = {"pdf", "docx", "doc", "xlsx", "xlsm", "txt"}
+_EXTENSOES_VALIDAS = {"pdf", "docx", "xlsx", "txt"}
 
 
 def _utcnow() -> datetime:
@@ -27,6 +29,17 @@ def _sha256_arquivo(caminho: Path) -> str:
         for bloco in iter(lambda: f.read(65536), b""):
             h.update(bloco)
     return h.hexdigest()
+
+
+def _sanitizar_nome(nome: str) -> str:
+    if not nome:
+        return "arquivo"
+    # remove componentes de diretorio (neutraliza ../, C:\...)
+    base = nome.replace("\\", "/").split("/")[-1]
+    # mantem apenas caracteres seguros; remove nulos e controles
+    seguro = re.sub(r"[^\w .\-()]", "_", base, flags=re.UNICODE)
+    seguro = seguro.strip(" .")
+    return seguro or "arquivo"
 
 
 def _armazenar_original(caminho: Path, sha256: str, extensao: str) -> str:
@@ -44,6 +57,8 @@ def ingest_document(
     licitacao_id: int,
     tipo_documento: enums.TipoDocumento,
     arquivo_path: str,
+    nome_original: str | None = None,
+    mime_type: str | None = None,
 ) -> IngestResult:
     caminho = Path(arquivo_path)
     if not caminho.exists():
@@ -71,7 +86,12 @@ def ingest_document(
 
     sha256 = _sha256_arquivo(caminho)
     existente = (
-        db.query(DocumentoFonte).filter(DocumentoFonte.sha256 == sha256).first()
+        db.query(DocumentoFonte)
+        .filter(
+            DocumentoFonte.licitacao_id == licitacao_id,
+            DocumentoFonte.sha256 == sha256,
+        )
+        .first()
     )
     if existente is not None:
         return IngestResult(
@@ -83,12 +103,14 @@ def ingest_document(
             precisa_ocr=existente.precisa_ocr,
         )
 
+    nome = _sanitizar_nome(nome_original) if nome_original else _sanitizar_nome(caminho.name)
     caminho_armazenado = _armazenar_original(caminho, sha256, extensao)
     doc = DocumentoFonte(
         licitacao_id=licitacao_id,
         tipo_documento=tipo_documento,
-        nome_original=caminho.name,
+        nome_original=nome,
         extensao=extensao,
+        mime_type=mime_type,
         tamanho_bytes=caminho.stat().st_size,
         sha256=sha256,
         caminho_armazenado=caminho_armazenado,
@@ -96,7 +118,28 @@ def ingest_document(
         precisa_ocr=False,
     )
     db.add(doc)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        existente = (
+            db.query(DocumentoFonte)
+            .filter(
+                DocumentoFonte.licitacao_id == licitacao_id,
+                DocumentoFonte.sha256 == sha256,
+            )
+            .first()
+        )
+        if existente is not None:
+            return IngestResult(
+                documento_id=existente.id,
+                sha256=sha256,
+                duplicado=True,
+                status=existente.status_processamento,
+                trechos_criados=len(existente.trechos),
+                precisa_ocr=existente.precisa_ocr,
+            )
+        raise
 
     resultado = extrair(caminho, extensao)
     trechos_criados = 0
@@ -117,6 +160,8 @@ def ingest_document(
                     celula_inicio=trecho.celula_inicio,
                     celula_fim=trecho.celula_fim,
                     paragrafo=trecho.paragrafo,
+                    tabela=trecho.tabela,
+                    linha_tabela=trecho.linha_tabela,
                     texto_bruto=trecho.texto_bruto,
                     sha256_texto=hashlib.sha256(
                         trecho.texto_bruto.encode("utf-8")

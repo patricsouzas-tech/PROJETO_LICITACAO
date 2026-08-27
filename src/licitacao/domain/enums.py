@@ -21,6 +21,7 @@ class TipoLocalizador(str, Enum):
     PAGINA = "PAGINA"
     PARAGRAFO = "PARAGRAFO"
     CELULA = "CELULA"
+    TABELA = "TABELA"
 
 
 class CondicaoProduto(str, Enum):

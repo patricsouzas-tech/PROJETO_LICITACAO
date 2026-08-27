@@ -9,9 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
-from licitacao.db.base import Base
-from licitacao.db import models  # noqa: F401
+${imports if imports else ""}
 
 revision: str = ${repr(up_revision)}
 down_revision: Union[str, None] = ${repr(down_revision)}
@@ -20,10 +18,8 @@ depends_on: Union[str, Sequence[str], None] = ${repr(depends_on)}
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-    Base.metadata.create_all(bind=bind)
+    ${upgrades if upgrades else "pass"}
 
 
 def downgrade() -> None:
-    bind = op.get_bind()
-    Base.metadata.drop_all(bind=bind)
+    ${downgrades if downgrades else "pass"}

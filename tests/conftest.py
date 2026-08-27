@@ -1,11 +1,8 @@
 """Conftest: prepara banco de testes SQLite em arquivo temporario e sessao."""
 
 import os
-import tempfile
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///./data/test_licitacao.db")
 os.environ.setdefault("DATA_DIR", "./data/test_documentos")
@@ -23,3 +20,15 @@ def db_session():
     finally:
         session.close()
         Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(scope="module")
+def api_client():
+    from fastapi.testclient import TestClient
+
+    from licitacao.api.main import app
+
+    Base.metadata.create_all(bind=engine)
+    with TestClient(app) as client:
+        yield client
+    Base.metadata.drop_all(bind=engine)

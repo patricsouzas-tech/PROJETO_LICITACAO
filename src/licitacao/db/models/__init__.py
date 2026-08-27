@@ -9,10 +9,9 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
-from sqlalchemy import (
-    Enum as SQLEnum,
-)
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 
 from ...domain import enums
@@ -43,6 +42,9 @@ class Licitacao(Base):
 
 class DocumentoFonte(Base):
     __tablename__ = "documento_fonte"
+    __table_args__ = (
+        UniqueConstraint("licitacao_id", "sha256", name="uq_documento_licitacao_sha"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     licitacao_id = Column(
@@ -87,6 +89,8 @@ class TrechoDocumento(Base):
     celula_inicio = Column(String(16), nullable=True)
     celula_fim = Column(String(16), nullable=True)
     paragrafo = Column(Integer, nullable=True)
+    tabela = Column(String(128), nullable=True)
+    linha_tabela = Column(Integer, nullable=True)
     texto_bruto = Column(Text, nullable=False)
     sha256_texto = Column(String(64), nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
@@ -126,6 +130,9 @@ class Item(Base):
     requisitos = relationship(
         "RequisitoTecnico", back_populates="item", cascade="all, delete-orphan"
     )
+    produtos_candidatos = relationship(
+        "ProdutoCandidato", back_populates="item", cascade="all, delete-orphan"
+    )
 
 
 class RequisitoTecnico(Base):
@@ -155,10 +162,12 @@ class ProdutoCandidato(Base):
     __tablename__ = "produto_candidato"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    requisito_id = Column(
-        Integer, ForeignKey("requisito_tecnico.id", ondelete="CASCADE"), nullable=False
+    item_id = Column(
+        Integer, ForeignKey("item.id", ondelete="CASCADE"), nullable=False
     )
     descricao = Column(Text, nullable=True)
+
+    item = relationship("Item", back_populates="produtos_candidatos")
 
 
 class Oferta(Base):
@@ -190,8 +199,12 @@ class ValidacaoRequisito(Base):
     requisito_id = Column(
         Integer, ForeignKey("requisito_tecnico.id", ondelete="CASCADE"), nullable=False
     )
+    produto_candidato_id = Column(
+        Integer, ForeignKey("produto_candidato.id", ondelete="CASCADE"), nullable=False
+    )
     oferta_id = Column(Integer, ForeignKey("oferta.id"), nullable=True)
     resultado = Column(SQLEnum(enums.ValidacaoResultado), nullable=False)
     observacao = Column(Text, nullable=True)
 
     requisito = relationship("RequisitoTecnico", back_populates="validacoes")
+    produto_candidato = relationship("ProdutoCandidato")

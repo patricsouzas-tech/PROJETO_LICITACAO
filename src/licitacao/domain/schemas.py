@@ -94,7 +94,8 @@ class ItemRead(ItemBase):
 class ValidacaoRequisitoRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    item_id: int
+    requisito_id: int
+    produto_candidato_id: int
     resultado: ValidacaoResultado
 
 

@@ -4,18 +4,24 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, FastAPI, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from ..core.config import settings
 from ..db.models import DocumentoFonte, Licitacao, TrechoDocumento
 from ..db.session import get_db
 from ..domain import enums
 from ..domain.schemas import (
+    DocumentoFonteRead,
     IngestResult,
     LicitacaoCreate,
     LicitacaoRead,
+    TrechoDocumentoRead,
 )
 from ..services.ingestion.ingest import ingest_document
 
-router = APIRouter()
+router = APIRouter(prefix="/api/v1")
+
+
+@router.get("/health")
+def health():
+    return {"status": "ok"}
 
 
 @router.post("/licitacoes", response_model=LicitacaoRead, status_code=201)
@@ -27,6 +33,11 @@ def criar_licitacao(payload: LicitacaoCreate, db: Session = Depends(get_db)):
     return obj
 
 
+@router.get("/licitacoes", response_model=list[LicitacaoRead])
+def listar_licitacoes(db: Session = Depends(get_db)):
+    return db.query(Licitacao).order_by(Licitacao.id).all()
+
+
 @router.get("/licitacoes/{licitacao_id}", response_model=LicitacaoRead)
 def obter_licitacao(licitacao_id: int, db: Session = Depends(get_db)):
     obj = db.get(Licitacao, licitacao_id)
@@ -35,7 +46,10 @@ def obter_licitacao(licitacao_id: int, db: Session = Depends(get_db)):
     return obj
 
 
-@router.post("/licitacoes/{licitacao_id}/documentos/ingest", response_model=IngestResult)
+@router.post(
+    "/licitacoes/{licitacao_id}/documentos",
+    response_model=IngestResult,
+)
 async def ingerir_documento(
     licitacao_id: int,
     tipo_documento: enums.TipoDocumento = Form(...),
@@ -54,7 +68,12 @@ async def ingerir_documento(
 
     try:
         resultado = ingest_document(
-            db, licitacao_id, tipo_documento, tmp_path
+            db,
+            licitacao_id,
+            tipo_documento,
+            tmp_path,
+            nome_original=arquivo.filename,
+            mime_type=arquivo.content_type,
         )
     finally:
         Path(tmp_path).unlink(missing_ok=True)
@@ -64,38 +83,45 @@ async def ingerir_documento(
     return resultado
 
 
-@router.get("/documentos/{documento_id}/trechos")
+@router.get(
+    "/licitacoes/{licitacao_id}/documentos",
+    response_model=list[DocumentoFonteRead],
+)
+def listar_documentos(licitacao_id: int, db: Session = Depends(get_db)):
+    licitacao = db.get(Licitacao, licitacao_id)
+    if licitacao is None:
+        raise HTTPException(status_code=404, detail="Licitacao nao encontrada")
+    return (
+        db.query(DocumentoFonte)
+        .filter(DocumentoFonte.licitacao_id == licitacao_id)
+        .order_by(DocumentoFonte.id)
+        .all()
+    )
+
+
+@router.get("/documentos/{documento_id}", response_model=DocumentoFonteRead)
+def obter_documento(documento_id: int, db: Session = Depends(get_db)):
+    doc = db.get(DocumentoFonte, documento_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Documento nao encontrado")
+    return doc
+
+
+@router.get(
+    "/documentos/{documento_id}/trechos",
+    response_model=list[TrechoDocumentoRead],
+)
 def listar_trechos(documento_id: int, db: Session = Depends(get_db)):
     doc = db.get(DocumentoFonte, documento_id)
     if doc is None:
         raise HTTPException(status_code=404, detail="Documento nao encontrado")
-    trechos = (
+    return (
         db.query(TrechoDocumento)
         .filter(TrechoDocumento.documento_id == documento_id)
         .order_by(TrechoDocumento.ordem)
         .all()
     )
-    return [
-        {
-            "id": t.id,
-            "ordem": t.ordem,
-            "tipo_localizador": t.tipo_localizador.value,
-            "pagina": t.pagina,
-            "planilha": t.planilha,
-            "celula_inicio": t.celula_inicio,
-            "celula_fim": t.celula_fim,
-            "paragrafo": t.paragrafo,
-            "texto_bruto": t.texto_bruto,
-            "sha256_texto": t.sha256_texto,
-        }
-        for t in trechos
-    ]
 
 
 app = FastAPI(title="PROJETO_LICITACAO", version="0.1.0")
 app.include_router(router)
-
-
-@app.get("/health")
-def health():
-    return {"status": "ok", "database_url": settings.database_url}
