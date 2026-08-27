@@ -1,4 +1,4 @@
-"""initial schema (deterministic)
+"""initial schema (deterministic and autonomous)
 
 Revision ID: 0001_initial
 Revises:
@@ -7,16 +7,22 @@ Create Date: 2026-08-27 00:00:00.000000
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 
-from licitacao.domain import enums
-
+from alembic import op
 
 revision: str = "0001_initial"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
+
+_TIPO_DOCUMENTO = ("EDITAL", "TERMO_REFERENCIA", "ANEXO", "PLANILHA", "OUTRO")
+_STATUS = ("RECEBIDO", "PROCESSANDO", "CONCLUIDO", "OCR_REQUIRED", "ERRO")
+_LOCALIZADOR = ("PAGINA", "PARAGRAFO", "CELULA", "TABELA")
+_MARKETPLACE = ("MERCADO_LIVRE", "OLX", "ENJOEI", "OUTRO")
+_CONDICAO = ("NOVO", "USADO", "RECONDICIONADO", "NAO_CONFIRMADO")
+_SIM_NAO = ("SIM", "NAO", "NAO_CONFIRMADO")
+_VALIDACAO = ("ATENDE", "NAO_ATENDE", "NAO_COMPROVADO")
 
 
 def upgrade() -> None:
@@ -42,7 +48,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "tipo_documento",
-            sa.Enum(enums.TipoDocumento, native_enum=False),
+            sa.Enum(*_TIPO_DOCUMENTO, native_enum=False),
             nullable=False,
         ),
         sa.Column("nome_original", sa.String(512), nullable=False),
@@ -53,7 +59,7 @@ def upgrade() -> None:
         sa.Column("caminho_armazenado", sa.String(1024), nullable=False),
         sa.Column(
             "status_processamento",
-            sa.Enum(enums.StatusProcessamento, native_enum=False),
+            sa.Enum(*_STATUS, native_enum=False),
             nullable=False,
         ),
         sa.Column("precisa_ocr", sa.Boolean(), nullable=False),
@@ -75,7 +81,7 @@ def upgrade() -> None:
         sa.Column("ordem", sa.Integer(), nullable=False),
         sa.Column(
             "tipo_localizador",
-            sa.Enum(enums.TipoLocalizador, native_enum=False),
+            sa.Enum(*_LOCALIZADOR, native_enum=False),
             nullable=False,
         ),
         sa.Column("pagina", sa.Integer(), nullable=True),
@@ -168,7 +174,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "marketplace",
-            sa.Enum(enums.Marketplace, native_enum=False),
+            sa.Enum(*_MARKETPLACE, native_enum=False),
             nullable=False,
         ),
         sa.Column("url", sa.String(2048), nullable=True),
@@ -179,12 +185,12 @@ def upgrade() -> None:
         sa.Column("valor_unitario_final", sa.Numeric(18, 6), nullable=True),
         sa.Column("quantidade_disponivel", sa.Integer(), nullable=True),
         sa.Column("data_coleta", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("condicao", sa.Enum(enums.CondicaoProduto, native_enum=False), nullable=True),
-        sa.Column("lacrado", sa.Enum(enums.SimNaoConfirmado, native_enum=False), nullable=True),
+        sa.Column("condicao", sa.Enum(*_CONDICAO, native_enum=False), nullable=True),
+        sa.Column("lacrado", sa.Enum(*_SIM_NAO, native_enum=False), nullable=True),
         sa.Column(
-            "caixa_original", sa.Enum(enums.SimNaoConfirmado, native_enum=False), nullable=True
+            "caixa_original", sa.Enum(*_SIM_NAO, native_enum=False), nullable=True
         ),
-        sa.Column("nota_fiscal", sa.Enum(enums.NotaFiscal, native_enum=False), nullable=True),
+        sa.Column("nota_fiscal", sa.Enum(*_SIM_NAO, native_enum=False), nullable=True),
     )
 
     op.create_table(
@@ -205,7 +211,7 @@ def upgrade() -> None:
         sa.Column("oferta_id", sa.Integer(), sa.ForeignKey("oferta.id"), nullable=True),
         sa.Column(
             "resultado",
-            sa.Enum(enums.ValidacaoResultado, native_enum=False),
+            sa.Enum(*_VALIDACAO, native_enum=False),
             nullable=False,
         ),
         sa.Column("observacao", sa.Text(), nullable=True),

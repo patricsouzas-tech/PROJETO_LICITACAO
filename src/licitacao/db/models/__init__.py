@@ -50,7 +50,7 @@ class DocumentoFonte(Base):
     licitacao_id = Column(
         Integer, ForeignKey("licitacao.id", ondelete="CASCADE"), nullable=False
     )
-    tipo_documento = Column(SQLEnum(enums.TipoDocumento), nullable=False)
+    tipo_documento = Column(SQLEnum(enums.TipoDocumento, native_enum=False), nullable=False)
     nome_original = Column(String(512), nullable=False)
     extensao = Column(String(32), nullable=False)
     mime_type = Column(String(128), nullable=True)
@@ -58,7 +58,7 @@ class DocumentoFonte(Base):
     sha256 = Column(String(64), nullable=False, index=True)
     caminho_armazenado = Column(String(1024), nullable=False)
     status_processamento = Column(
-        SQLEnum(enums.StatusProcessamento),
+        SQLEnum(enums.StatusProcessamento, native_enum=False),
         default=enums.StatusProcessamento.RECEBIDO,
         nullable=False,
     )
@@ -83,7 +83,7 @@ class TrechoDocumento(Base):
         Integer, ForeignKey("documento_fonte.id", ondelete="CASCADE"), nullable=False
     )
     ordem = Column(Integer, nullable=False)
-    tipo_localizador = Column(SQLEnum(enums.TipoLocalizador), nullable=False)
+    tipo_localizador = Column(SQLEnum(enums.TipoLocalizador, native_enum=False), nullable=False)
     pagina = Column(Integer, nullable=True)
     planilha = Column(String(128), nullable=True)
     celula_inicio = Column(String(16), nullable=True)
@@ -177,7 +177,7 @@ class Oferta(Base):
     produto_candidato_id = Column(
         Integer, ForeignKey("produto_candidato.id", ondelete="CASCADE"), nullable=False
     )
-    marketplace = Column(SQLEnum(enums.Marketplace), nullable=False)
+    marketplace = Column(SQLEnum(enums.Marketplace, native_enum=False), nullable=False)
     url = Column(String(2048), nullable=True)
     vendedor = Column(String(256), nullable=True)
     preco_unitario = Column(Numeric(18, 6), nullable=True)
@@ -186,10 +186,10 @@ class Oferta(Base):
     valor_unitario_final = Column(Numeric(18, 6), nullable=True)
     quantidade_disponivel = Column(Integer, nullable=True)
     data_coleta = Column(DateTime(timezone=True), nullable=True)
-    condicao = Column(SQLEnum(enums.CondicaoProduto), nullable=True)
-    lacrado = Column(SQLEnum(enums.SimNaoConfirmado), nullable=True)
-    caixa_original = Column(SQLEnum(enums.SimNaoConfirmado), nullable=True)
-    nota_fiscal = Column(SQLEnum(enums.NotaFiscal), nullable=True)
+    condicao = Column(SQLEnum(enums.CondicaoProduto, native_enum=False), nullable=True)
+    lacrado = Column(SQLEnum(enums.SimNaoConfirmado, native_enum=False), nullable=True)
+    caixa_original = Column(SQLEnum(enums.SimNaoConfirmado, native_enum=False), nullable=True)
+    nota_fiscal = Column(SQLEnum(enums.NotaFiscal, native_enum=False), nullable=True)
 
 
 class ValidacaoRequisito(Base):
@@ -203,7 +203,7 @@ class ValidacaoRequisito(Base):
         Integer, ForeignKey("produto_candidato.id", ondelete="CASCADE"), nullable=False
     )
     oferta_id = Column(Integer, ForeignKey("oferta.id"), nullable=True)
-    resultado = Column(SQLEnum(enums.ValidacaoResultado), nullable=False)
+    resultado = Column(SQLEnum(enums.ValidacaoResultado, native_enum=False), nullable=False)
     observacao = Column(Text, nullable=True)
 
     requisito = relationship("RequisitoTecnico", back_populates="validacoes")

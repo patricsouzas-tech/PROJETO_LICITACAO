@@ -13,6 +13,7 @@ from ...db.models import DocumentoFonte, TrechoDocumento
 from ...domain import enums
 from ...domain.schemas import IngestResult
 from ..extraction.extract import extrair
+from ..extraction.validate import validar_conteudo
 
 logger = get_logger(__name__)
 
@@ -84,7 +85,10 @@ def ingest_document(
             erro=f"Extensao nao suportada: {extensao}",
         )
 
-    sha256 = _sha256_arquivo(caminho)
+    dados = caminho.read_bytes()
+    validar_conteudo(extensao, dados)
+
+    sha256 = hashlib.sha256(dados).hexdigest()
     existente = (
         db.query(DocumentoFonte)
         .filter(

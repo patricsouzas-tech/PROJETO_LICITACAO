@@ -83,3 +83,17 @@ def test_listar_documentos(api_client):
 def test_documento_404(api_client):
     r = api_client.get("/api/v1/documentos/999999")
     assert r.status_code == 404
+
+
+def test_upload_texto_como_pdf_retorna_422(api_client):
+    r = api_client.post("/api/v1/licitacoes", json={"titulo": "Upload invalido"})
+    lic_id = r.json()["id"]
+
+    conteudo = "isto e texto puro, mas enviado como .pdf".encode("utf-8")
+    r = api_client.post(
+        f"/api/v1/licitacoes/{lic_id}/documentos",
+        files={"arquivo": ("arquivo.pdf", conteudo, "application/pdf")},
+        data={"tipo_documento": "EDITAL"},
+    )
+    assert r.status_code == 422
+    assert "PDF" in r.json()["detail"]

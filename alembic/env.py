@@ -1,12 +1,11 @@
-import os
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from alembic import context
 from licitacao.core.config import settings
-from licitacao.db.base import Base
 from licitacao.db import models  # noqa: F401  (registra os modelos)
+from licitacao.db.base import Base
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

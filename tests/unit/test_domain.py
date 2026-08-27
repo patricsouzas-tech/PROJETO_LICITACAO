@@ -1,7 +1,9 @@
 
+from decimal import Decimal
+
 from sqlalchemy import Numeric
 
-from licitacao.db.models import Item, ProdutoCandidato, ValidacaoRequisito
+from licitacao.db.models import Item, Oferta, ProdutoCandidato, ValidacaoRequisito
 from licitacao.domain.enums import ValidacaoResultado
 from licitacao.domain.schemas import (
     LicitacaoRead,
@@ -14,6 +16,29 @@ def test_numeric_e_decimal_para_dinheiro():
     assert isinstance(col, Numeric)
     assert col.precision == 18
     assert col.scale == 6
+
+
+def test_oferta_valores_monetarios_sao_numeric_18_6():
+    for nome in ("preco_unitario", "frete", "outros_custos", "valor_unitario_final"):
+        col = Oferta.__table__.c[nome].type
+        assert isinstance(col, Numeric), nome
+        assert col.precision == 18, nome
+        assert col.scale == 6, nome
+
+
+def test_oferta_preserva_decimal_sem_float():
+    oferta = Oferta(
+        id=1,
+        produto_candidato_id=1,
+        marketplace="MERCADO_LIVRE",
+        preco_unitario=Decimal("1234.567890"),
+        frete=Decimal("10.000000"),
+        outros_custos=Decimal("0.000000"),
+        valor_unitario_final=Decimal("1244.567890"),
+    )
+    assert isinstance(oferta.preco_unitario, Decimal)
+    assert oferta.preco_unitario == Decimal("1234.567890")
+    assert oferta.valor_unitario_final == Decimal("1244.567890")
 
 
 def test_schema_licitacao_from_orm():

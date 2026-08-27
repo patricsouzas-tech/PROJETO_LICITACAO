@@ -1,6 +1,7 @@
 # Secrets / credentials
 .env
 .env.*
+!.env.example
 *.env
 *.key
 *.pem
@@ -39,7 +40,6 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
-.env
 
 # Operational data (originals, working files) — keep out of Git
 data/

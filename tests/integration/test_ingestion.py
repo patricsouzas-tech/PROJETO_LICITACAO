@@ -1,8 +1,10 @@
 """Testes de integracao da ingestaio documental (ETAPA 01B)."""
+import pytest
 from pathlib import Path
 
 from licitacao.db.models import DocumentoFonte, Licitacao, TrechoDocumento
 from licitacao.domain import enums
+from licitacao.services.extraction.validate import FormatoInvalidoError
 from licitacao.services.ingestion.ingest import ingest_document
 
 
@@ -37,22 +39,21 @@ def test_ingestao_txt_cria_documento_e_trechos(db_session, tmp_path: Path):
     assert trechos[0].sha256_texto
 
 
-def test_nome_original_preservado_e_mime_persistido(db_session, tmp_path: Path):
+def test_conteudo_pdf_invalido_levanta_erro_sem_criar_documento(db_session, tmp_path: Path):
     lic = _criar_licitacao(db_session)
     arquivo = tmp_path / "TERMO DE REFERENCIA.pdf"
     arquivo.write_bytes(b"%PDF-1.4 fake")
-    # nao e um pdf textual valido -> erro, mas nome_original e mime devem ser registrados
-    r = ingest_document(
-        db_session,
-        lic.id,
-        enums.TipoDocumento.TERMO_REFERENCIA,
-        str(arquivo),
-        nome_original="TERMO DE REFERENCIA.pdf",
-        mime_type="application/pdf",
-    )
-    doc = db_session.get(DocumentoFonte, r.documento_id)
-    assert doc.nome_original == "TERMO DE REFERENCIA.pdf"
-    assert doc.mime_type == "application/pdf"
+    # conteudo incompativel com a extensao -> ERRO fatal, sem persistir documento
+    with pytest.raises(FormatoInvalidoError):
+        ingest_document(
+            db_session,
+            lic.id,
+            enums.TipoDocumento.TERMO_REFERENCIA,
+            str(arquivo),
+            nome_original="TERMO DE REFERENCIA.pdf",
+            mime_type="application/pdf",
+        )
+    assert db_session.query(DocumentoFonte).all() == []
 
 
 def test_deduplicacao_mesma_licitacao(db_session, tmp_path: Path):

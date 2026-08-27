@@ -14,6 +14,7 @@ from ..domain.schemas import (
     LicitacaoRead,
     TrechoDocumentoRead,
 )
+from ..services.extraction.validate import FormatoInvalidoError
 from ..services.ingestion.ingest import ingest_document
 
 router = APIRouter(prefix="/api/v1")
@@ -75,6 +76,8 @@ async def ingerir_documento(
             nome_original=arquivo.filename,
             mime_type=arquivo.content_type,
         )
+    except FormatoInvalidoError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     finally:
         Path(tmp_path).unlink(missing_ok=True)
 
