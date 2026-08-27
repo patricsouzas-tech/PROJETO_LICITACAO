@@ -85,6 +85,26 @@ def test_documento_404(api_client):
     assert r.status_code == 404
 
 
+def test_endpoint_parser_cria_estrutura(api_client):
+    r = api_client.post("/api/v1/licitacoes", json={"titulo": "Parser API"})
+    lic_id = r.json()["id"]
+
+    conteudo = "LOTE 1\nITEM 1 - Mesa\nQuantidade: 5 UN\n".encode("utf-8")
+    r = api_client.post(
+        f"/api/v1/licitacoes/{lic_id}/documentos",
+        files={"arquivo": ("t.txt", conteudo, "text/plain")},
+        data={"tipo_documento": "TERMO_REFERENCIA"},
+    )
+    assert r.status_code == 200
+
+    r = api_client.post(f"/api/v1/licitacoes/{lic_id}/parser")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["lotes_criados"] == 1
+    assert body["itens_criados"] == 1
+    assert body["status"] == "CONCLUIDO"
+
+
 def test_upload_texto_como_pdf_retorna_422(api_client):
     r = api_client.post("/api/v1/licitacoes", json={"titulo": "Upload invalido"})
     lic_id = r.json()["id"]

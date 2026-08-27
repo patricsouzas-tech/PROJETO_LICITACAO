@@ -54,3 +54,16 @@ class ValidacaoResultado(str, Enum):
     ATENDE = "ATENDE"
     NAO_ATENDE = "NAO_ATENDE"
     NAO_COMPROVADO = "NAO_COMPROVADO"
+
+
+class EntidadeTipo(str, Enum):
+    LOTE = "LOTE"
+    ITEM = "ITEM"
+    REQUISITO = "REQUISITO"
+
+
+class StatusParsing(str, Enum):
+    INICIADO = "INICIADO"
+    CONCLUIDO = "CONCLUIDO"
+    PARCIAL = "PARCIAL"
+    ERRO = "ERRO"

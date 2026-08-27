@@ -15,7 +15,15 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 
 from ...domain import enums
+from ...domain.enums import EntidadeTipo, StatusParsing
 from ..base import Base
+
+
+def _fingerprint(*partes: str) -> str:
+    import hashlib
+
+    raw = "|".join(partes)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 def _utcnow() -> datetime:
@@ -108,9 +116,24 @@ class Lote(Base):
     numero = Column(String(32), nullable=False)
     titulo = Column(String(512), nullable=True)
     descricao = Column(Text, nullable=True)
+    sintetico = Column(Boolean, default=False, nullable=False)
+    documento_origem_id = Column(
+        Integer, ForeignKey("documento_fonte.id"), nullable=True
+    )
+    trecho_origem_id = Column(
+        Integer, ForeignKey("trecho_documento.id"), nullable=True
+    )
+    fingerprint = Column(String(64), nullable=True, index=True)
 
     itens = relationship(
         "Item", back_populates="lote", cascade="all, delete-orphan"
+    )
+    evidencias = relationship(
+        "EvidenciaParsing",
+        primaryjoin="and_(EvidenciaParsing.entidade_tipo=='LOTE', EvidenciaParsing.entidade_id==Lote.id)",  # noqa: E501
+        foreign_keys="EvidenciaParsing.entidade_id",
+        cascade="all, delete-orphan",
+        viewonly=True,
     )
 
 
@@ -125,6 +148,15 @@ class Item(Base):
     descricao_original = Column(Text, nullable=True)
     quantidade = Column(Numeric(18, 6), nullable=True)
     unidade = Column(String(16), nullable=True)
+    unidade_original = Column(String(32), nullable=True)
+    unidade_normalizada = Column(String(32), nullable=True)
+    documento_origem_id = Column(
+        Integer, ForeignKey("documento_fonte.id"), nullable=True
+    )
+    trecho_origem_id = Column(
+        Integer, ForeignKey("trecho_documento.id"), nullable=True
+    )
+    fingerprint = Column(String(64), nullable=True, index=True)
 
     lote = relationship("Lote", back_populates="itens")
     requisitos = relationship(
@@ -132,6 +164,13 @@ class Item(Base):
     )
     produtos_candidatos = relationship(
         "ProdutoCandidato", back_populates="item", cascade="all, delete-orphan"
+    )
+    evidencias = relationship(
+        "EvidenciaParsing",
+        primaryjoin="and_(EvidenciaParsing.entidade_tipo=='ITEM', EvidenciaParsing.entidade_id==Item.id)",  # noqa: E501
+        foreign_keys="EvidenciaParsing.entidade_id",
+        cascade="all, delete-orphan",
+        viewonly=True,
     )
 
 
@@ -151,8 +190,16 @@ class RequisitoTecnico(Base):
     trecho_origem_id = Column(
         Integer, ForeignKey("trecho_documento.id"), nullable=True
     )
+    fingerprint = Column(String(64), nullable=True, index=True)
 
     item = relationship("Item", back_populates="requisitos")
+    evidencias = relationship(
+        "EvidenciaParsing",
+        primaryjoin="and_(EvidenciaParsing.entidade_tipo=='REQUISITO', EvidenciaParsing.entidade_id==RequisitoTecnico.id)",  # noqa: E501
+        foreign_keys="EvidenciaParsing.entidade_id",
+        cascade="all, delete-orphan",
+        viewonly=True,
+    )
     validacoes = relationship(
         "ValidacaoRequisito", back_populates="requisito", cascade="all, delete-orphan"
     )
@@ -208,3 +255,51 @@ class ValidacaoRequisito(Base):
 
     requisito = relationship("RequisitoTecnico", back_populates="validacoes")
     produto_candidato = relationship("ProdutoCandidato")
+
+
+class EvidenciaParsing(Base):
+    __tablename__ = "evidencia_parsing"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    licitacao_id = Column(
+        Integer, ForeignKey("licitacao.id", ondelete="CASCADE"), nullable=False
+    )
+    entidade_tipo = Column(SQLEnum(EntidadeTipo, native_enum=False), nullable=False)
+    entidade_id = Column(Integer, nullable=False)
+    campo = Column(String(64), nullable=False)
+    documento_id = Column(
+        Integer, ForeignKey("documento_fonte.id"), nullable=True
+    )
+    trecho_id = Column(
+        Integer, ForeignKey("trecho_documento.id"), nullable=True
+    )
+    ordem = Column(Integer, nullable=False, default=0)
+    texto_evidencia = Column(Text, nullable=False)
+    fingerprint = Column(String(64), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("fingerprint", name="uq_evidencia_fingerprint"),
+    )
+
+
+class ExecucaoParsing(Base):
+    __tablename__ = "execucao_parsing"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    licitacao_id = Column(
+        Integer, ForeignKey("licitacao.id", ondelete="CASCADE"), nullable=False
+    )
+    iniciado_em = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    concluido_em = Column(DateTime(timezone=True), nullable=True)
+    status = Column(
+        SQLEnum(StatusParsing, native_enum=False),
+        default=StatusParsing.INICIADO,
+        nullable=False,
+    )
+    documentos_processados = Column(Integer, default=0, nullable=False)
+    lotes_criados = Column(Integer, default=0, nullable=False)
+    itens_criados = Column(Integer, default=0, nullable=False)
+    requisitos_criados = Column(Integer, default=0, nullable=False)
+    erros = Column(Text, nullable=True)
+    resumo = Column(Text, nullable=True)

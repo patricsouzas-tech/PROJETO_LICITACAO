@@ -5,8 +5,8 @@ Sistema de apoio a licitações com ingestão documental rastreável.
 ## Status
 
 - ETAPA 00: baseline real e auditoria de continuidade — concluída.
-- ETAPA 01: fundação arquitetural + ingestão documental rastreável — **CONCLUÍDA** (corrigida em ETAPA 01B).
-- Próximo: ETAPA 02 (parser de edital → lotes → itens → requisitos com evidência de origem), aguardando auditoria do ChatGPT.
+- ETAPA 01: fundação arquitetural + ingestão documental rastreável — **CONCLUÍDA** (corrigida em ETAPA 01B/01C/01D).
+- ETAPA 02: parser rastreável edital → lotes → itens → requisitos — **CONCLUÍDA** (auditada pelo CI; aguardando liberação do ChatGPT).
 
 ## Stack
 
@@ -86,6 +86,7 @@ $env:DATA_DIR="./data/test_documentos"
 | GET | `/licitacoes/{id}/documentos` | lista documentos da licitação |
 | GET | `/documentos/{id}` | obtém documento |
 | GET | `/documentos/{id}/trechos` | lista trechos extraídos (rastreáveis) |
+| POST | `/licitacoes/{id}/parser` | executa o parser rastreável (lotes→itens→requisitos) |
 
 ## Estrutura
 
@@ -111,7 +112,6 @@ docs/{architecture,audit}
 - Mercado Livre, OLX, Enjoei, scraping, Playwright
 - Validação de produtos, cotação final
 - IA/LLM, OCR, frontend completo
-- Parser automático de edital (será ETAPA 02)
 - PostgreSQL (arquitetura já neutra; SQLite em dev/testes)
 
 ## Princípios

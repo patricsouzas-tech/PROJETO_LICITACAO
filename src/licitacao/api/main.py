@@ -4,7 +4,11 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, FastAPI, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from ..db.models import DocumentoFonte, Licitacao, TrechoDocumento
+from ..db.models import (
+    DocumentoFonte,
+    Licitacao,
+    TrechoDocumento,
+)
 from ..db.session import get_db
 from ..domain import enums
 from ..domain.schemas import (
@@ -16,6 +20,7 @@ from ..domain.schemas import (
 )
 from ..services.extraction.validate import FormatoInvalidoError
 from ..services.ingestion.ingest import ingest_document
+from ..services.parsing import ParserService
 
 router = APIRouter(prefix="/api/v1")
 
@@ -108,6 +113,24 @@ def obter_documento(documento_id: int, db: Session = Depends(get_db)):
     if doc is None:
         raise HTTPException(status_code=404, detail="Documento nao encontrado")
     return doc
+
+
+@router.post("/licitacoes/{licitacao_id}/parser", status_code=200)
+def executar_parser(licitacao_id: int, db: Session = Depends(get_db)):
+    licitacao = db.get(Licitacao, licitacao_id)
+    if licitacao is None:
+        raise HTTPException(status_code=404, detail="Licitacao nao encontrada")
+    execucao = ParserService(db).processar(licitacao_id)
+    return {
+        "execucao_id": execucao.id,
+        "status": execucao.status.value,
+        "documentos_processados": execucao.documentos_processados,
+        "lotes_criados": execucao.lotes_criados,
+        "itens_criados": execucao.itens_criados,
+        "requisitos_criados": execucao.requisitos_criados,
+        "erros": execucao.erros,
+        "resumo": execucao.resumo,
+    }
 
 
 @router.get(
