@@ -1,0 +1,41 @@
+# Secrets / credentials
+.env
+.env.*
+*.env
+*.key
+*.pem
+secrets.json
+credentials.json
+*.token
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# Build / temp
+dist/
+build/
+out/
+.cache/
+.tmp/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local databases / sensitive data
+*.db
+*.sqlite
+*.sqlite3
