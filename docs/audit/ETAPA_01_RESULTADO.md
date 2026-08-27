@@ -8,7 +8,7 @@ Auditoria de correção da fundação (ETAPA 01B) — ChatGPT exigiu antes da ET
 - Repositório: `https://github.com/patricsouzas-tech/PROJETO_LICITACAO.git`
 - Branch: `main`
 - Commit inicial (auditado pelo ChatGPT): `6ad78d40c9d26cb9e47ee80faafa0a8c431747cc`
-- Commit final: `<SHA FINAL>`
+- Commit final: `ebe13cad2512bbfa19d508e951a23c7f184c2fd4`
 
 ## O que foi corrigido (ETAPA 01B)
 
@@ -70,7 +70,7 @@ health, CRUD de licitação/documento/trechos, 404s, e teste isolado de Alembic)
 
 ```
 Commit inicial: 6ad78d40c9d26cb9e47ee80faafa0a8c431747cc
-Commit final: <SHA FINAL>
+Commit final: ebe13cad2512bbfa19d508e951a23c7f184c2fd4
 Push: SUCESSO
 Python 3.13: NAO VALIDADO (ambiente local 3.14.7)
 Migration determinística: PASS
@@ -92,7 +92,7 @@ Path traversal: PASS
 .env.example: PASS
 PowerShell dev.ps1: PASS
 PowerShell test.ps1: PASS
-Testes: <X PASS / Y FAIL / Z SKIP>
+Testes: 36 PASS / 0 FAIL / 0 SKIP
 Ruff: PASS
 Segredos: NENHUM
 Documentação: PASS
