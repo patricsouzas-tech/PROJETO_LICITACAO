@@ -8,7 +8,9 @@ Auditoria de continuidade do projeto de licitações — ETAPA 00 (baseline real
 - Repositório: `https://github.com/patricsouzas-tech/PROJETO_LICITACAO.git`
 - Branch: `main`
 - Commit inicial (GitHub): `cee894bac83da3261219d7ecbe8663998f8f1552`
-- Commit final da auditoria: `7a7583ac8c16a13c9d2d2fbf8bc900db80cf8133`
+- Commit funcional da auditoria: `7a7583ac8c16a13c9d2d2fbf8bc900db80cf8133` (criado com os relatórios de auditoria)
+- Commit de fechamento documental da ETAPA 00: `1547276ee7efcca9b7b7a8d204afceaee1d72f42` (apenas preencheu o campo "commit final" no relatório)
+- HEAD final da ETAPA 00: `1547276ee7efcca9b7b7a8d204afceaee1d72f42`
 
 ## B. Árvore do projeto
 
